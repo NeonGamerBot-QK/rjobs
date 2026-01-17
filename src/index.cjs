@@ -11,7 +11,7 @@ let modulePromise = null;
  */
 function loadModule() {
   if (!modulePromise) {
-    modulePromise = import('./index.js');
+    modulePromise = import("./index.js");
   }
   return modulePromise;
 }
@@ -160,5 +160,5 @@ module.exports = {
    */
   async init() {
     return loadModule();
-  }
+  },
 };
