@@ -1,9 +1,16 @@
 {
-  "name": "active-job-node",
+  "name": "rjobs",
   "version": "1.0.0",
   "description": "A Rails ActiveJob-inspired background job framework for Node.js",
   "type": "module",
   "main": "src/index.js",
+  "types": "src/types.d.ts",
+  "exports": {
+    ".": {
+      "types": "./src/types.d.ts",
+      "import": "./src/index.js"
+    }
+  },
   "scripts": {
     "worker": "node src/worker.js",
     "example": "node examples/usage.js",
