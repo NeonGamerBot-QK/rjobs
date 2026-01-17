@@ -1,0 +1,27 @@
+{
+  "name": "active-job-node",
+  "version": "1.0.0",
+  "description": "A Rails ActiveJob-inspired background job framework for Node.js",
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "worker": "node src/worker.js",
+    "example": "node examples/usage.js",
+    "test": "node --test tests/**/*.test.js"
+  },
+  "keywords": [
+    "jobs",
+    "background",
+    "queue",
+    "activejob",
+    "bullmq",
+    "redis"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "bullmq": "^5.1.0",
+    "ioredis": "^5.3.2"
+  },
+  "devDependencies": {}
+}
