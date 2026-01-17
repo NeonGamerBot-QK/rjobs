@@ -1,10 +1,11 @@
-# ActiveJob for Node.js
+# rjobs
 
 A Rails ActiveJob-inspired background job framework for Node.js. Supports multiple queue adapters including inline execution and Redis-backed queues via BullMQ.
 
 ## Features
 
 - **Rails-like API**: `performNow()`, `performLater()`, `performIn()`, `performAt()`
+- **Auto-loading**: Jobs in a `jobs/` folder are automatically available globally
 - **Multiple adapters**: Inline (immediate) and Redis (BullMQ/Sidekiq-like)
 - **Job lifecycle hooks**: `beforePerform`, `afterPerform`, `onError`
 - **Configurable retries**: Per-job retry attempts with backoff
@@ -19,84 +20,79 @@ pnpm install
 
 ## Quick Start
 
-### 1. Define a Job
+### 1. Create a jobs folder and define jobs
 
 ```javascript
-import { BaseJob } from './src/index.js';
+// jobs/c.js
+import { BaseJob } from 'rjobs';
 
-class SendEmailJob extends BaseJob {
-  // Optional: specify queue name (default: 'default')
-  static queue = 'mailers';
-  
-  // Optional: configure retries
-  static retryAttempts = 5;
-  static backoffDelay = 2000;
-
-  async perform(to, subject, body) {
-    console.log(`Sending email to ${to}: ${subject}`);
-    // Your email logic here
-    return { sent: true };
-  }
-
-  // Optional lifecycle hooks
-  async beforePerform() {
-    console.log('About to send email...');
-  }
-
-  async afterPerform(result) {
-    console.log('Email sent successfully:', result);
-  }
-
-  async onError(error) {
-    console.error('Failed to send email:', error.message);
+export default class C extends BaseJob {
+  async perform(name = 'world') {
+    console.log(`hi ${name}`);
   }
 }
 ```
 
-### 2. Execute Jobs
+```javascript
+// jobs/send-email.js
+import { BaseJob } from 'rjobs';
+
+export default class SendEmail extends BaseJob {
+  static queue = 'mailers';
+  static retryAttempts = 5;
+
+  async perform(to, subject, body) {
+    console.log(`Sending email to ${to}: ${subject}`);
+    return { sent: true };
+  }
+}
+```
+
+### 2. Load jobs and use them globally
 
 ```javascript
-import { config } from './src/index.js';
+// index.js
+import { loadJobs, config } from 'rjobs';
 
-// Use inline adapter (immediate execution - good for development)
 config.queueAdapter = 'inline';
 
-// Execute immediately with instance
-const job = new SendEmailJob();
-await job.performNow('user@example.com', 'Hello', 'World');
+// Load all jobs from ./jobs and register them globally
+await loadJobs('./jobs');
 
-// Or use class method
-await SendEmailJob.performLater('user@example.com', 'Hello', 'World');
+// Jobs are now available globally - no imports needed!
+await C.performNow('zeon');           // prints: hi zeon
+await C.performLater('world');        // prints: hi world
 
-// Delayed execution (waits 5 seconds)
-await SendEmailJob.performIn(5000, 'user@example.com', 'Delayed', 'Message');
-
-// Scheduled execution (at specific time)
-const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000);
-await SendEmailJob.performAt(tomorrow, 'user@example.com', 'Scheduled', 'Message');
+await SendEmail.performNow('user@example.com', 'Hello', 'World');
 ```
 
 ### 3. Use Redis Adapter for Production
 
 ```javascript
-import { config, registerJob, startWorker } from './src/index.js';
+import { loadJobs, config, startWorker } from 'rjobs';
 
 // Configure Redis adapter
 config.queueAdapter = 'redis';
 config.redis = { host: 'localhost', port: 6379 };
 
+// Load jobs (also registers them with the worker)
+await loadJobs('./jobs');
+
 // Enqueue jobs (they go to Redis)
-await SendEmailJob.performLater('user@example.com', 'Hello', 'World');
+await SendEmail.performLater('user@example.com', 'Hello', 'World');
 ```
 
 ### 4. Run Workers (separate process)
 
 ```javascript
-import { registerJob, startWorker, setupGracefulShutdown } from './src/index.js';
-import { SendEmailJob } from './jobs/send-email-job.js';
+// worker.js
+import { loadJobs, config, startWorker, setupGracefulShutdown } from 'rjobs';
 
-// Register all job classes
-registerJob(SendEmailJob);
+config.queueAdapter = 'redis';
+config.redis = { host: 'localhost', port: 6379 };
+
+// Load and register all jobs
+await loadJobs('./jobs');
 
 // Start workers for each queue
 startWorker('default', { concurrency: 2 });
@@ -106,10 +102,29 @@ startWorker('mailers', { concurrency: 1 });
 setupGracefulShutdown();
 ```
 
+## Manual Job Definition (without auto-loading)
+
+If you prefer explicit imports over global registration:
+
+```javascript
+import { BaseJob, config } from 'rjobs';
+
+class MyJob extends BaseJob {
+  async perform(data) {
+    console.log('Processing:', data);
+  }
+}
+
+config.queueAdapter = 'inline';
+
+await MyJob.performNow({ foo: 'bar' });
+await MyJob.performLater({ foo: 'bar' });
+```
+
 ## Configuration
 
 ```javascript
-import { config } from './src/index.js';
+import { config } from 'rjobs';
 
 // Set queue adapter: 'inline' or 'redis'
 config.queueAdapter = 'redis';
@@ -148,6 +163,9 @@ await SendEmailJob
 # Install dependencies
 pnpm install
 
+# Run the demo app (shows global job usage)
+node examples/demo-app/index.js
+
 # Run inline adapter demo
 node examples/usage.js inline
 
@@ -168,11 +186,20 @@ node examples/usage.js redis
 
 | Method | Description |
 |--------|-------------|
-| `performNow(...args)` | Executes job immediately with lifecycle hooks |
+| `static performNow(...args)` | Executes job immediately |
 | `static performLater(...args)` | Enqueues job for async execution |
 | `static performIn(delayMs, ...args)` | Enqueues job with delay |
 | `static performAt(date, ...args)` | Enqueues job for specific time |
 | `static set(options)` | Returns chainable object with overridden options |
+
+### Loader Functions
+
+| Function | Description |
+|----------|-------------|
+| `loadJobs(dir, options)` | Loads jobs from directory and registers globally |
+| `getJob(name)` | Gets a loaded job class by name |
+| `getAllJobs()` | Returns Map of all loaded jobs |
+| `clearJobs()` | Clears loaded jobs from memory and global scope |
 
 ### Lifecycle Hooks
 
