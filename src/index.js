@@ -41,3 +41,11 @@ export {
   stopWorkers,
   setupGracefulShutdown
 } from './worker.js';
+
+// Loader exports (for auto-discovering jobs)
+export {
+  loadJobs,
+  getJob,
+  getAllJobs,
+  clearJobs
+} from './loader.js';

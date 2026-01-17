@@ -91,6 +91,18 @@ export class BaseJob {
   }
 
   /**
+   * Executes the job immediately (static version).
+   * Creates an instance and calls performNow.
+   * 
+   * @param {...any} args - Arguments to pass to the perform method
+   * @returns {Promise<any>} The result of the perform method
+   */
+  static async performNow(...args) {
+    const job = new this();
+    return job.performNow(...args);
+  }
+
+  /**
    * Enqueues the job for later execution using the configured adapter.
    * 
    * @param {...any} args - Arguments to pass to the perform method
