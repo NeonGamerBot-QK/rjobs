@@ -250,6 +250,42 @@ Uses BullMQ for distributed job processing. Features:
 | `before_perform` | `async beforePerform()` |
 | `after_perform` | `async afterPerform(result)` |
 
+## Architecture
+
+```mermaid
+flowchart TB
+    subgraph Application
+        A[Your Code] -->|"performNow()"| B[BaseJob]
+        A -->|"performLater()"| B
+        A -->|"performIn(delay)"| B
+    end
+
+    subgraph Adapters
+        B --> C{Adapter?}
+        C -->|inline| D[InlineAdapter]
+        C -->|redis| E[RedisAdapter]
+    end
+
+    subgraph Inline["Inline (Development)"]
+        D -->|immediate| F[Execute Job]
+    end
+
+    subgraph Redis["Redis (Production)"]
+        E -->|enqueue| G[(Redis Queue)]
+        G -->|dequeue| H[Worker Process]
+        H --> I[Execute Job]
+    end
+
+    subgraph Lifecycle
+        F --> J[beforePerform]
+        I --> J
+        J --> K[perform]
+        K -->|success| L[afterPerform]
+        K -->|error| M[onError]
+        M -->|retry?| G
+    end
+```
+
 ## License
 
 MIT
