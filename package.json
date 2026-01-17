@@ -8,7 +8,8 @@
   "exports": {
     ".": {
       "types": "./src/types.d.ts",
-      "import": "./src/index.js"
+      "import": "./src/index.js",
+      "require": "./src/index.cjs"
     }
   },
   "scripts": {
@@ -44,7 +45,8 @@
   "files": [
     "src",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "src/index.cjs"
   ],
   "dependencies": {
     "bullmq": "^5.1.0",
